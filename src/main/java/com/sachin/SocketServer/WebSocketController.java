@@ -2,7 +2,6 @@ package com.sachin.SocketServer;
 
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
@@ -63,10 +62,8 @@ public class WebSocketController extends TextWebSocketHandler {
       case "calleeCandidate":
         handleSignalingMessage(jsonMessage, session);
         break;
-      case "muteVideo":
-      case "unmuteVideo":
-      case "muteAudio":
-      case "unmuteAudio":
+
+      case "mediaToggle":
         handleToggleMedia(session, jsonMessage);
         break;
       default:
@@ -83,8 +80,8 @@ public class WebSocketController extends TextWebSocketHandler {
     }
   }
 
-  private void handleCreateRoom(WebSocketSession session, JSONObject jsonMessage)
-      throws JSONException {
+  @SneakyThrows
+  private void handleCreateRoom(WebSocketSession session, JSONObject jsonMessage) {
 
     String roomId = jsonMessage.getString("roomId");
 
