@@ -2,6 +2,7 @@ package com.sachin.SocketServer;
 
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
@@ -25,7 +26,6 @@ public class WebSocketController extends TextWebSocketHandler {
         "Received message: " + message.getPayload() + " from session: " + session.getId());
 
     JSONObject jsonMessage;
-    String offer = "";
     String roomId = "";
 
     try {
@@ -41,18 +41,17 @@ public class WebSocketController extends TextWebSocketHandler {
     }
 
     String messageType = jsonMessage.getString("type");
+
     if (jsonMessage.has("roomId")) {
-
       roomId = jsonMessage.getString("roomId");
-    }
-
-    if (jsonMessage.has("sdp")) {
-      offer = jsonMessage.getString("sdp");
     }
 
     switch (messageType) {
       case "createRoom":
-        handleCreateRoom(session, roomId, offer);
+        handleCreateRoom(session, jsonMessage);
+        break;
+      case "callerCandidate":
+        setCallerCandidates(jsonMessage);
         break;
       case "joinRoom":
         handleJoinRoom(session, roomId);
@@ -60,9 +59,8 @@ public class WebSocketController extends TextWebSocketHandler {
       case "checkRoom":
         handleCheckRoom(session, roomId);
         break;
-      case "offer":
       case "answer":
-      case "candidate":
+      case "calleeCandidate":
         handleSignalingMessage(jsonMessage, session);
         break;
       case "muteVideo":
@@ -76,15 +74,37 @@ public class WebSocketController extends TextWebSocketHandler {
     }
   }
 
-  private void handleCreateRoom(WebSocketSession session, String roomId, String offer) {
+  @SneakyThrows
+  private void setCallerCandidates(JSONObject jsonMessage) {
+    String roomId = jsonMessage.getString("roomId");
+
+    if (jsonMessage.has("candidate")) {
+      roomManager.setCandidates(roomId, jsonMessage.toString());
+    }
+  }
+
+  private void handleCreateRoom(WebSocketSession session, JSONObject jsonMessage)
+      throws JSONException {
+
+    String roomId = jsonMessage.getString("roomId");
 
     if (roomManager.createRoom(roomId, session)) {
-      roomManager.setOffer(roomId, offer);
+      roomManager.setOffer(roomId, jsonMessage.getString("sdp"));
       sendRoomCreated(session, roomId);
 
     } else {
       sendError(session, "Room already exists");
     }
+  }
+
+  @SneakyThrows
+  private void handleCheckRoom(@NotNull WebSocketSession session, String roomId) {
+    JSONObject response = new JSONObject();
+    response.put("type", "roomExists");
+    response.put("exists", roomManager.roomExists(roomId));
+    response.put("callerCandidate", roomManager.getCandidates(roomId));
+
+    session.sendMessage(new TextMessage(response.toString()));
   }
 
   @SneakyThrows
@@ -101,16 +121,8 @@ public class WebSocketController extends TextWebSocketHandler {
     }
   }
 
-  private void handleCheckRoom(@NotNull WebSocketSession session, String roomId) throws Exception {
-    JSONObject response = new JSONObject();
-    response.put("type", "roomExists");
-    response.put("exists", roomManager.roomExists(roomId));
-
-    session.sendMessage(new TextMessage(response.toString()));
-  }
-
-  private void handleSignalingMessage(@NotNull JSONObject jsonMessage, WebSocketSession session)
-      throws Exception {
+  @SneakyThrows
+  private void handleSignalingMessage(JSONObject jsonMessage, WebSocketSession session) {
 
     String roomId = jsonMessage.getString("roomId");
 
@@ -119,44 +131,50 @@ public class WebSocketController extends TextWebSocketHandler {
       return;
     }
 
-    // Forward the signaling message (answer or candidate) to all participants
-    for (WebSocketSession participant : roomManager.getParticipants(roomId)) {
-      if (participant != session && participant.isOpen()) {
-        // Here we can add a check to see if the message is an answer or a candidate
-        if (jsonMessage.has("sdp") || jsonMessage.has("candidate")) {
-          participant.sendMessage(new TextMessage(jsonMessage.toString()));
-        }
-      }
+    // Get the peer (the other participant) in the room
+    WebSocketSession peer = roomManager.getPeer(roomId, session);
+
+    // If there's no peer or the peer's connection is not open, handle the error
+    if (peer == null || !peer.isOpen()) {
+      sendError(session, "Peer not connected or unavailable");
+      return;
     }
 
-    // Optionally, you could handle the answer or candidate specifically here
-    if (jsonMessage.getString("type").equals("answer")) {
-      // Handle answer specifics if necessary
-    } else if (jsonMessage.getString("type").equals("candidate")) {
-      // Handle candidate specifics if necessary
+    // Forward the signaling message (SDP answer or ICE candidate) to the peer
+    if (jsonMessage.has("sdp") || jsonMessage.has("candidate")) {
+      peer.sendMessage(new TextMessage(jsonMessage.toString()));
     }
   }
 
-  private void handleToggleMedia(WebSocketSession session, @NotNull JSONObject jsonMessage)
-      throws Exception {
+  @SneakyThrows
+  private void handleToggleMedia(WebSocketSession session, @NotNull JSONObject jsonMessage) {
     String roomId = jsonMessage.getString("roomId");
     String mediaType = jsonMessage.getString("mediaType");
     String action = jsonMessage.getString("action");
 
+    // Check if the room exists
     if (!roomManager.roomExists(roomId)) {
       sendError(session, "Room not found");
       return;
     }
 
-    for (WebSocketSession participant : roomManager.getParticipants(roomId)) {
-      if (participant != session && participant.isOpen()) {
-        JSONObject mediaUpdate = new JSONObject();
-        mediaUpdate.put("type", "mediaToggle");
-        mediaUpdate.put("mediaType", mediaType);
-        mediaUpdate.put("action", action);
-        participant.sendMessage(new TextMessage(mediaUpdate.toString()));
-      }
+    // Get the peer (the other participant in the room)
+    WebSocketSession peer = roomManager.getPeer(roomId, session);
+
+    // If no peer is found or peer's connection is closed, return an error
+    if (peer == null || !peer.isOpen()) {
+      sendError(session, "Peer not connected or unavailable");
+      return;
     }
+
+    // Prepare the media toggle update message
+    JSONObject mediaUpdate = new JSONObject();
+    mediaUpdate.put("type", "mediaToggle");
+    mediaUpdate.put("mediaType", mediaType);
+    mediaUpdate.put("action", action);
+
+    // Send the media toggle message to the peer
+    peer.sendMessage(new TextMessage(mediaUpdate.toString()));
   }
 
   @SneakyThrows
