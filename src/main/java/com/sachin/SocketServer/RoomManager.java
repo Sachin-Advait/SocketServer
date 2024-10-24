@@ -49,25 +49,6 @@ public class RoomManager {
     return null; // No other peer found (e.g., only one peer in the room)
   }
 
-  // Remove a peer from the room
-  public boolean removePeer(String roomId, WebSocketSession session) {
-    if (!rooms.containsKey(roomId)) {
-      return false;
-    }
-
-    List<WebSocketSession> peers = rooms.get(roomId);
-    peers.remove(session);
-
-    // If the room is empty after removing the peer, delete the room
-    if (peers.isEmpty()) {
-      rooms.remove(roomId);
-      offers.remove(roomId); // Remove the offer if room is deleted
-      candidates.remove(roomId); // Remove the candidates if room is deleted
-    }
-
-    return true;
-  }
-
   // Set the offer for a room
   public void setOffer(String roomId, String offer) {
     offers.put(roomId, offer); // Store the offer for the room
