@@ -1,5 +1,6 @@
-package com.sachin.SocketServer;
+package com.sachin.SocketServer.config;
 
+import com.sachin.SocketServer.controller.WebSocketController;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.WebSocketHandler;

@@ -1,5 +1,6 @@
-package com.sachin.SocketServer;
+package com.sachin.SocketServer.controller;
 
+import com.sachin.SocketServer.RoomManager;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
