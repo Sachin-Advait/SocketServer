@@ -81,12 +81,19 @@ public class WebSocketController extends TextWebSocketHandler {
 
   private void removeRoom(@NotNull WebSocketSession session, String roomId)
       throws IOException, JSONException {
+
+    WebSocketSession peer = roomManager.getPeer(roomId, session);
+
+    if (peer == null) {
+      return;
+    }
+
     roomManager.removeRoom(roomId);
     JSONObject response = new JSONObject();
     response.put("type", "roomRemoved");
     response.put("roomId", roomId);
 
-    session.sendMessage(new TextMessage(response.toString()));
+    peer.sendMessage(new TextMessage(response.toString()));
   }
 
   private void setCallerCandidates(JSONObject jsonMessage) {
@@ -230,7 +237,7 @@ public class WebSocketController extends TextWebSocketHandler {
         sendError(session, "'offer' is not available");
       }
     } catch (JSONException | IOException e) {
-      sendError(session, "Error could create room: " + e.getMessage());
+      sendError(session, "Error could not join room: " + e.getMessage());
     }
   }
 
