@@ -15,9 +15,9 @@
     <description>Demo project for Spring Boot for Video calling</description>
 
     <properties>
-        <java.version>19</java.version>
-        <maven.compiler.source>19</maven.compiler.source>
-        <maven.compiler.target>19</maven.compiler.target>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
     <dependencies>
