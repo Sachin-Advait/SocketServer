@@ -68,12 +68,25 @@ public class WebSocketController extends TextWebSocketHandler {
         case "mediaToggle":
           handleToggleMedia(session, jsonMessage);
           break;
+        case "removeRoom":
+          removeRoom(session, roomId);
+          break;
         default:
           sendError(session, "Unknown message type: " + messageType);
       }
     } catch (JSONException e) {
       sendError(session, "Error processing JSON message: " + e.getMessage());
     }
+  }
+
+  private void removeRoom(@NotNull WebSocketSession session, String roomId)
+      throws IOException, JSONException {
+    roomManager.removeRoom(roomId);
+    JSONObject response = new JSONObject();
+    response.put("type", "roomRemoved");
+    response.put("roomId", roomId);
+
+    session.sendMessage(new TextMessage(response.toString()));
   }
 
   private void setCallerCandidates(JSONObject jsonMessage) {
@@ -222,13 +235,13 @@ public class WebSocketController extends TextWebSocketHandler {
   }
 
   private void sendError(@NotNull WebSocketSession session, String error) throws IOException {
+    JSONObject response = new JSONObject();
     try {
-      JSONObject response = new JSONObject();
       response.put("type", "error");
       response.put("message", error);
       session.sendMessage(new TextMessage(response.toString()));
-    } catch (JSONException | IOException e) {
-      sendError(session, "Error could create room: " + e.getMessage());
+    } catch (JSONException e) {
+      throw new RuntimeException(e);
     }
   }
 }

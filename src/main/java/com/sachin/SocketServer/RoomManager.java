@@ -38,6 +38,13 @@ public class RoomManager {
     return rooms.containsKey(roomId);
   }
 
+  public void removeRoom(String roomId) {
+    if (!rooms.containsKey(roomId)) {
+      return;
+    }
+    rooms.remove(roomId);
+  }
+
   // Retrieve the other peer in the room (for peer-to-peer communication)
   public WebSocketSession getPeer(String roomId, WebSocketSession session) {
     List<WebSocketSession> peers = rooms.getOrDefault(roomId, new ArrayList<>());
