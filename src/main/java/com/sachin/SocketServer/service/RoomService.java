@@ -1,4 +1,4 @@
-package com.sachin.SocketServer;
+package com.sachin.SocketServer.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.web.socket.WebSocketSession;
 
-public class RoomManager {
+public class RoomService {
 
   private final Map<String, List<WebSocketSession>> rooms = new ConcurrentHashMap<>();
   private final Map<String, String> offers = new ConcurrentHashMap<>(); // Map to hold offers
@@ -43,6 +43,7 @@ public class RoomManager {
       return;
     }
     rooms.remove(roomId);
+    offers.remove(roomId);
   }
 
   // Retrieve the other peer in the room (for peer-to-peer communication)

@@ -1,6 +1,6 @@
 package com.sachin.SocketServer.controller;
 
-import com.sachin.SocketServer.RoomManager;
+import com.sachin.SocketServer.service.RoomService;
 import java.io.IOException;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
@@ -13,7 +13,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @Component
 public class WebSocketController extends TextWebSocketHandler {
 
-  private final RoomManager roomManager = new RoomManager(); // Instantiate RoomManager
+  private final RoomService roomService = new RoomService(); // Instantiate roomService
 
   @Override
   public void afterConnectionEstablished(@NotNull WebSocketSession session) {
@@ -82,13 +82,13 @@ public class WebSocketController extends TextWebSocketHandler {
   private void removeRoom(@NotNull WebSocketSession session, String roomId)
       throws IOException, JSONException {
 
-    WebSocketSession peer = roomManager.getPeer(roomId, session);
+    WebSocketSession peer = roomService.getPeer(roomId, session);
 
     if (peer == null) {
       return;
     }
 
-    roomManager.removeRoom(roomId);
+    roomService.removeRoom(roomId);
     JSONObject response = new JSONObject();
     response.put("type", "roomRemoved");
     response.put("roomId", roomId);
@@ -101,7 +101,7 @@ public class WebSocketController extends TextWebSocketHandler {
       String roomId = jsonMessage.getString("roomId");
 
       if (jsonMessage.has("candidate")) {
-        roomManager.setCandidates(roomId, jsonMessage.toString());
+        roomService.setCandidates(roomId, jsonMessage.toString());
       }
     } catch (JSONException e) {
       throw new RuntimeException("Error retrieving candidates: " + e.getMessage());
@@ -113,8 +113,8 @@ public class WebSocketController extends TextWebSocketHandler {
     try {
       String roomId = jsonMessage.getString("roomId");
 
-      if (roomManager.createRoom(roomId, session)) {
-        roomManager.setOffer(roomId, jsonMessage.getString("sdp"));
+      if (roomService.createRoom(roomId, session)) {
+        roomService.setOffer(roomId, jsonMessage.getString("sdp"));
         sendRoomCreated(session, roomId);
       } else {
         sendError(session, "Room already exists");
@@ -129,8 +129,8 @@ public class WebSocketController extends TextWebSocketHandler {
     try {
       JSONObject response = new JSONObject();
       response.put("type", "roomExists");
-      response.put("exists", roomManager.roomExists(roomId));
-      response.put("callerCandidate", roomManager.getCandidates(roomId));
+      response.put("exists", roomService.roomExists(roomId));
+      response.put("callerCandidate", roomService.getCandidates(roomId));
 
       session.sendMessage(new TextMessage(response.toString()));
     } catch (JSONException | IOException e) {
@@ -140,10 +140,10 @@ public class WebSocketController extends TextWebSocketHandler {
 
   private void handleJoinRoom(WebSocketSession session, String roomId)
       throws JSONException, IOException {
-    if (roomManager.roomExists(roomId)) {
-      roomManager.joinRoom(roomId, session);
+    if (roomService.roomExists(roomId)) {
+      roomService.joinRoom(roomId, session);
       // If there's an existing offer in the room, send it to the new participant
-      String offer = roomManager.getOffer(roomId);
+      String offer = roomService.getOffer(roomId);
       sendOfferAfterRoomJoined(session, offer);
     } else {
       sendError(session, "Room not found");
@@ -155,13 +155,13 @@ public class WebSocketController extends TextWebSocketHandler {
     try {
       String roomId = jsonMessage.getString("roomId");
 
-      if (!roomManager.roomExists(roomId)) {
+      if (!roomService.roomExists(roomId)) {
         sendError(session, "Room not found");
         return;
       }
 
       // Get the peer (the other participant) in the room
-      WebSocketSession peer = roomManager.getPeer(roomId, session);
+      WebSocketSession peer = roomService.getPeer(roomId, session);
 
       // If there's no peer or the peer's connection is not open, handle the error
       if (peer == null || !peer.isOpen()) {
@@ -186,13 +186,13 @@ public class WebSocketController extends TextWebSocketHandler {
       String action = jsonMessage.getString("action");
 
       // Check if the room exists
-      if (!roomManager.roomExists(roomId)) {
+      if (!roomService.roomExists(roomId)) {
         sendError(session, "Room not found");
         return;
       }
 
       // Get the peer (the other participant in the room)
-      WebSocketSession peer = roomManager.getPeer(roomId, session);
+      WebSocketSession peer = roomService.getPeer(roomId, session);
 
       // If no peer is found or peer's connection is closed, return an error
       if (peer == null || !peer.isOpen()) {
