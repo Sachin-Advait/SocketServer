@@ -9,9 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 public class RoomService {
 
   private final Map<String, List<WebSocketSession>> rooms = new ConcurrentHashMap<>();
-  private final Map<String, String> offers = new ConcurrentHashMap<>(); // Map to hold offers
-  private final Map<String, String> candidates =
-      new ConcurrentHashMap<>(); // Map to hold candidates
+  private final DatabaseService databaseService = new DatabaseService();
 
   // Create a new room with the first peer
   public boolean createRoom(String roomId, WebSocketSession session) {
@@ -20,11 +18,10 @@ public class RoomService {
     }
 
     rooms.put(roomId, new ArrayList<>());
-    rooms.get(roomId).add(session); // Add the first peer
+    rooms.get(roomId).add(session);
     return true;
   }
 
-  // A second peer joins the room
   public void joinRoom(String roomId, WebSocketSession session) {
     if (!rooms.containsKey(roomId)) {
       return; // Room does not exist
@@ -43,7 +40,7 @@ public class RoomService {
       return;
     }
     rooms.remove(roomId);
-    offers.remove(roomId);
+    databaseService.deleteRoom(roomId); // Delete room data from the database
   }
 
   // Retrieve the other peer in the room (for peer-to-peer communication)
@@ -57,42 +54,56 @@ public class RoomService {
     return null; // No other peer found (e.g., only one peer in the room)
   }
 
-  // Remove a peer from the room
-  public boolean removePeer(String roomId, WebSocketSession session) {
-    if (!rooms.containsKey(roomId)) {
-      return false;
-    }
-
-    List<WebSocketSession> peers = rooms.get(roomId);
-    peers.remove(session);
-
-    // If the room is empty after removing the peer, delete the room
-    if (peers.isEmpty()) {
-      rooms.remove(roomId);
-      offers.remove(roomId); // Remove the offer if room is deleted
-      candidates.remove(roomId); // Remove the candidates if room is deleted
-    }
-
-    return true;
-  }
-
-  // Set the offer for a room
   public void setOffer(String roomId, String offer) {
-    offers.put(roomId, offer); // Store the offer for the room
+    databaseService.setOffer(roomId, offer);
   }
 
-  // Get the offer for a room
   public String getOffer(String roomId) {
-    return offers.get(roomId); // Retrieve the offer for the room
+    return databaseService.getOffer(roomId);
   }
 
-  // Set ICE candidates for a room
+  // Set and retrieve candidates
   public void setCandidates(String roomId, String candidate) {
-    candidates.put(roomId, candidate); // Store the candidates for the room
+    databaseService.setCandidates(roomId, candidate);
   }
 
-  // Get ICE candidates for a room
   public String getCandidates(String roomId) {
-    return candidates.get(roomId); // Retrieve the candidates for the room
+    return databaseService.getCandidates(roomId);
+  }
+
+  // Set and retrieve audio state
+  public void setUserName(String roomId, String userName) {
+    databaseService.setUserName(roomId, userName);
+  }
+
+  public String getUserName(String roomId) {
+    return databaseService.getUserName(roomId);
+  }
+
+  // Set and retrieve audio state
+  public void setImage(String roomId, String image) {
+    databaseService.setImage(roomId, image);
+  }
+
+  public String getImage(String roomId) {
+    return databaseService.getImage(roomId);
+  }
+
+  // Set and retrieve audio state
+  public void setAudio(String roomId, Boolean audio) {
+    databaseService.setAudio(roomId, audio);
+  }
+
+  public Boolean getAudio(String roomId) {
+    return databaseService.getAudio(roomId);
+  }
+
+  // Set and retrieve video state
+  public void setVideo(String roomId, Boolean video) {
+    databaseService.setVideo(roomId, video);
+  }
+
+  public Boolean getVideo(String roomId) {
+    return databaseService.getVideo(roomId);
   }
 }

@@ -2,6 +2,7 @@ package com.sachin.SocketServer.controller;
 
 import com.sachin.SocketServer.service.RoomService;
 import java.io.IOException;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -79,23 +80,6 @@ public class WebSocketController extends TextWebSocketHandler {
     }
   }
 
-  private void removeRoom(@NotNull WebSocketSession session, String roomId)
-      throws IOException, JSONException {
-
-    WebSocketSession peer = roomService.getPeer(roomId, session);
-
-    if (peer == null) {
-      return;
-    }
-
-    roomService.removeRoom(roomId);
-    JSONObject response = new JSONObject();
-    response.put("type", "roomRemoved");
-    response.put("roomId", roomId);
-
-    peer.sendMessage(new TextMessage(response.toString()));
-  }
-
   private void setCallerCandidates(JSONObject jsonMessage) {
     try {
       String roomId = jsonMessage.getString("roomId");
@@ -112,9 +96,18 @@ public class WebSocketController extends TextWebSocketHandler {
       throws IOException {
     try {
       String roomId = jsonMessage.getString("roomId");
+      String sdp = jsonMessage.getString("sdp");
+      String userName = jsonMessage.optString("userName", "");
+      String image = jsonMessage.optString("image", "");
+      boolean audio = jsonMessage.optBoolean("audio", true);
+      boolean video = jsonMessage.optBoolean("video", true);
 
       if (roomService.createRoom(roomId, session)) {
-        roomService.setOffer(roomId, jsonMessage.getString("sdp"));
+        roomService.setOffer(roomId, sdp);
+        roomService.setImage(roomId, image);
+        roomService.setUserName(roomId, userName);
+        roomService.setAudio(roomId, audio);
+        roomService.setVideo(roomId, video);
         sendRoomCreated(session, roomId);
       } else {
         sendError(session, "Room already exists");
@@ -142,9 +135,13 @@ public class WebSocketController extends TextWebSocketHandler {
       throws JSONException, IOException {
     if (roomService.roomExists(roomId)) {
       roomService.joinRoom(roomId, session);
-      // If there's an existing offer in the room, send it to the new participant
       String offer = roomService.getOffer(roomId);
-      sendOfferAfterRoomJoined(session, offer);
+      String userName = roomService.getUserName(roomId);
+      String image = roomService.getImage(roomId);
+      boolean audio = roomService.getAudio(roomId);
+      boolean video = roomService.getVideo(roomId);
+
+      sendOfferAfterRoomJoined(session, offer, userName, image, audio, video);
     } else {
       sendError(session, "Room not found");
     }
@@ -184,29 +181,32 @@ public class WebSocketController extends TextWebSocketHandler {
       String roomId = jsonMessage.getString("roomId");
       String mediaType = jsonMessage.getString("mediaType");
       String action = jsonMessage.getString("action");
+      boolean create = jsonMessage.getBoolean("create");
 
-      // Check if the room exists
       if (!roomService.roomExists(roomId)) {
         sendError(session, "Room not found");
         return;
       }
 
-      // Get the peer (the other participant in the room)
-      WebSocketSession peer = roomService.getPeer(roomId, session);
+      if (create) {
+        if (Objects.equals(mediaType, "video")) {
+          roomService.setVideo(roomId, Objects.equals(action, "videoOff"));
+        } else {
+          roomService.setAudio(roomId, Objects.equals(action, "muted"));
+        }
+      }
 
-      // If no peer is found or peer's connection is closed, return an error
+      WebSocketSession peer = roomService.getPeer(roomId, session);
       if (peer == null || !peer.isOpen()) {
         sendError(session, "Peer not connected or unavailable");
         return;
       }
 
-      // Prepare the media toggle update message
       JSONObject mediaUpdate = new JSONObject();
       mediaUpdate.put("type", "mediaToggle");
       mediaUpdate.put("mediaType", mediaType);
       mediaUpdate.put("action", action);
 
-      // Send the media toggle message to the peer
       peer.sendMessage(new TextMessage(mediaUpdate.toString()));
     } catch (JSONException | IOException e) {
       sendError(session, "Error processing media toggle: " + e.getMessage());
@@ -219,26 +219,50 @@ public class WebSocketController extends TextWebSocketHandler {
     try {
       response.put("type", "roomCreated");
       response.put("roomId", roomId);
-
       session.sendMessage(new TextMessage(response.toString()));
     } catch (JSONException | IOException e) {
       sendError(session, "Error could create room: " + e.getMessage());
     }
   }
 
-  private void sendOfferAfterRoomJoined(WebSocketSession session, String offer) throws IOException {
+  private void sendOfferAfterRoomJoined(
+      WebSocketSession session,
+      String offer,
+      String userName,
+      String image,
+      boolean audio,
+      boolean video)
+      throws IOException {
     try {
-      if (offer != null) {
-        JSONObject offerMessage = new JSONObject();
-        offerMessage.put("type", "offer");
-        offerMessage.put("sdp", offer);
-        session.sendMessage(new TextMessage(offerMessage.toString()));
-      } else {
-        sendError(session, "'offer' is not available");
-      }
+      JSONObject offerMessage = new JSONObject();
+      offerMessage.put("type", "offer");
+      offerMessage.put("sdp", offer);
+      offerMessage.put("userName", userName);
+      offerMessage.put("image", image);
+      offerMessage.put("video", video);
+      offerMessage.put("audio", audio);
+
+      session.sendMessage(new TextMessage(offerMessage.toString()));
     } catch (JSONException | IOException e) {
       sendError(session, "Error could not join room: " + e.getMessage());
     }
+  }
+
+  private void removeRoom(@NotNull WebSocketSession session, String roomId)
+      throws IOException, JSONException {
+
+    WebSocketSession peer = roomService.getPeer(roomId, session);
+
+    if (peer == null) {
+      return;
+    }
+
+    roomService.removeRoom(roomId);
+    JSONObject response = new JSONObject();
+    response.put("type", "roomRemoved");
+    response.put("roomId", roomId);
+
+    peer.sendMessage(new TextMessage(response.toString()));
   }
 
   private void sendError(@NotNull WebSocketSession session, String error) throws IOException {
