@@ -13,7 +13,7 @@ public class DatabaseService {
   public void setOffer(String roomId, String offer) {
     RoomModel roomData = RoomDao.getRoomData(roomId);
     if (roomData == null) {
-      roomData = new RoomModel(roomId, offer, null, null, null, null, null);
+      roomData = new RoomModel(roomId, offer, null, null, null, null, null, null);
     } else {
       roomData.setOffer(offer);
     }
@@ -28,7 +28,7 @@ public class DatabaseService {
   public void setCandidates(String roomId, String candidate) {
     RoomModel roomData = RoomDao.getRoomData(roomId);
     if (roomData == null) {
-      roomData = new RoomModel(roomId, null, candidate, null, null, null, null);
+      roomData = new RoomModel(roomId, null, candidate, null, null, null, null, null);
     } else {
       roomData.setCandidate(candidate);
     }
@@ -43,7 +43,7 @@ public class DatabaseService {
   public void setUserName(String roomId, String userName) {
     RoomModel roomData = RoomDao.getRoomData(roomId);
     if (roomData == null) {
-      roomData = new RoomModel(roomId, null, null, userName, null, null, null);
+      roomData = new RoomModel(roomId, null, null, userName, null, null, null, null);
     } else {
       roomData.setUserName(userName);
     }
@@ -58,7 +58,7 @@ public class DatabaseService {
   public void setImage(String roomId, String image) {
     RoomModel roomData = RoomDao.getRoomData(roomId);
     if (roomData == null) {
-      roomData = new RoomModel(roomId, null, null, null, image, null, null);
+      roomData = new RoomModel(roomId, null, null, null, image, null, null, null);
     } else {
       roomData.setImage(image);
     }
@@ -73,7 +73,7 @@ public class DatabaseService {
   public void setAudio(String roomId, Boolean audio) {
     RoomModel roomData = RoomDao.getRoomData(roomId);
     if (roomData == null) {
-      roomData = new RoomModel(roomId, null, null, null, null, audio, null);
+      roomData = new RoomModel(roomId, null, null, null, null, audio, null, null);
     } else {
       roomData.setAudio(audio);
     }
@@ -88,7 +88,7 @@ public class DatabaseService {
   public void setVideo(String roomId, Boolean video) {
     RoomModel roomData = RoomDao.getRoomData(roomId);
     if (roomData == null) {
-      roomData = new RoomModel(roomId, null, null, null, null, null, video);
+      roomData = new RoomModel(roomId, null, null, null, null, null, video, null);
     } else {
       roomData.setVideo(video);
     }
@@ -98,6 +98,21 @@ public class DatabaseService {
   public Boolean getVideo(String roomId) {
     RoomModel roomData = RoomDao.getRoomData(roomId);
     return roomData != null ? roomData.getVideo() : null;
+  }
+
+  public void setRemotePeerId(String roomId, String remotePeerId) {
+    RoomModel roomData = RoomDao.getRoomData(roomId);
+    if (roomData == null) {
+      roomData = new RoomModel(roomId, null, null, null, null, null, null, remotePeerId);
+    } else {
+      roomData.setRemotePeerId(remotePeerId);
+    }
+    RoomDao.saveOrUpdateRoomData(roomData);
+  }
+
+  public String getRemotePeerId(String roomId) {
+    RoomModel roomData = RoomDao.getRoomData(roomId);
+    return roomData != null ? roomData.getRemotePeerId() : null;
   }
 
   public void deleteRoom(String roomId) {

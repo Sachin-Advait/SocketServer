@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -19,6 +20,12 @@ public class WebSocketController extends TextWebSocketHandler {
   @Override
   public void afterConnectionEstablished(@NotNull WebSocketSession session) {
     System.out.println("New connection established: " + session.getId());
+  }
+
+  @Override
+  public void afterConnectionClosed(
+      @NotNull WebSocketSession session, @NotNull CloseStatus status) {
+    System.out.println("WebSocket connection closed: " + session.getId());
   }
 
   @Override
@@ -101,6 +108,7 @@ public class WebSocketController extends TextWebSocketHandler {
       String image = jsonMessage.optString("image", "");
       boolean audio = jsonMessage.optBoolean("audio", true);
       boolean video = jsonMessage.optBoolean("video", true);
+      String remotePeerId = jsonMessage.optString("remotePeerId", "");
 
       if (roomService.createRoom(roomId, session)) {
         roomService.setOffer(roomId, sdp);
@@ -108,6 +116,7 @@ public class WebSocketController extends TextWebSocketHandler {
         roomService.setUserName(roomId, userName);
         roomService.setAudio(roomId, audio);
         roomService.setVideo(roomId, video);
+        roomService.setRemotePeerId(roomId, remotePeerId);
         sendRoomCreated(session, roomId);
       } else {
         sendError(session, "Room already exists");
@@ -140,8 +149,9 @@ public class WebSocketController extends TextWebSocketHandler {
       String image = roomService.getImage(roomId);
       boolean audio = roomService.getAudio(roomId);
       boolean video = roomService.getVideo(roomId);
+      String remotePeerId = roomService.getRemotePeerId(roomId);
 
-      sendOfferAfterRoomJoined(session, offer, userName, image, audio, video);
+      sendOfferAfterRoomJoined(session, offer, userName, image, audio, video, remotePeerId);
     } else {
       sendError(session, "Room not found");
     }
@@ -231,7 +241,8 @@ public class WebSocketController extends TextWebSocketHandler {
       String userName,
       String image,
       boolean audio,
-      boolean video)
+      boolean video,
+      String remotePeerId)
       throws IOException {
     try {
       JSONObject offerMessage = new JSONObject();
@@ -241,6 +252,7 @@ public class WebSocketController extends TextWebSocketHandler {
       offerMessage.put("image", image);
       offerMessage.put("video", video);
       offerMessage.put("audio", audio);
+      offerMessage.put("remotePeerId", remotePeerId);
 
       session.sendMessage(new TextMessage(offerMessage.toString()));
     } catch (JSONException | IOException e) {

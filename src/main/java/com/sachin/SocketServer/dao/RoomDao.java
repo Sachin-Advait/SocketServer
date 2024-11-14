@@ -25,7 +25,8 @@ public class RoomDao {
               userName TEXT,
               image TEXT,
               audio BOOLEAN NOT NULL DEFAULT 0,
-              video BOOLEAN NOT NULL DEFAULT 0
+              video BOOLEAN NOT NULL DEFAULT 0,
+              remotePeerId TEXT
             );
             """;
 
@@ -40,9 +41,9 @@ public class RoomDao {
   // Insert or update RoomData
   public void saveOrUpdateRoomData(RoomModel roomData) {
     String sql =
-        "INSERT INTO RoomData (roomId, offer, candidate, userName, image, audio, video) "
-            + "VALUES (?, ?, ?, ?, ?, ?, ?) "
-            + "ON CONFLICT(roomId) DO UPDATE SET offer = ?, candidate = ?, userName = ?, image = ?, audio = ?, video = ?";
+        "INSERT INTO RoomData (roomId, offer, candidate, userName, image, audio, video, remotePeerId) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            + "ON CONFLICT(roomId) DO UPDATE SET offer = ?, candidate = ?, userName = ?, image = ?, audio = ?, video = ?, remotePeerId = ?";
     try (Connection conn = DriverManager.getConnection(DB_URL);
         PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setString(1, roomData.getRoomId());
@@ -52,12 +53,14 @@ public class RoomDao {
       stmt.setString(5, roomData.getImage());
       stmt.setBoolean(6, roomData.getAudio());
       stmt.setBoolean(7, roomData.getVideo());
-      stmt.setString(8, roomData.getOffer());
-      stmt.setString(9, roomData.getCandidate());
-      stmt.setString(10, roomData.getUserName());
-      stmt.setString(11, roomData.getImage());
-      stmt.setBoolean(12, roomData.getAudio());
-      stmt.setBoolean(13, roomData.getVideo());
+      stmt.setString(8, roomData.getRemotePeerId());
+      stmt.setString(9, roomData.getOffer());
+      stmt.setString(10, roomData.getCandidate());
+      stmt.setString(11, roomData.getUserName());
+      stmt.setString(12, roomData.getImage());
+      stmt.setBoolean(13, roomData.getAudio());
+      stmt.setBoolean(14, roomData.getVideo());
+      stmt.setString(15, roomData.getRemotePeerId());
       stmt.executeUpdate();
     } catch (SQLException e) {
       log.error("Error saving or updating RoomData: ", e);
@@ -79,7 +82,8 @@ public class RoomDao {
             rs.getString("userName"),
             rs.getString("image"),
             rs.getBoolean("audio"),
-            rs.getBoolean("video"));
+            rs.getBoolean("video"),
+            rs.getString("remotePeerId"));
       }
     } catch (SQLException e) {
       log.error("Error fetching RoomData: ", e);

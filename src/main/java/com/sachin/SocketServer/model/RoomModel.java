@@ -8,6 +8,7 @@ public class RoomModel {
   private String image;
   private Boolean audio;
   private Boolean video;
+  private String remotePeerId;
 
   // Constructor
   public RoomModel(
@@ -17,7 +18,8 @@ public class RoomModel {
       String userName,
       String image,
       Boolean audio,
-      Boolean video) {
+      Boolean video,
+      String remotePeerId) {
     this.roomId = roomId;
     this.offer = offer;
     this.candidate = candidate;
@@ -25,6 +27,7 @@ public class RoomModel {
     this.userName = userName;
     this.audio = audio != null ? audio : false;
     this.video = video != null ? video : false;
+    this.remotePeerId = remotePeerId;
   }
 
   // Getters and Setters
@@ -82,5 +85,13 @@ public class RoomModel {
 
   public void setVideo(Boolean video) {
     this.video = video;
+  }
+
+  public String getRemotePeerId() {
+    return remotePeerId;
+  }
+
+  public void setRemotePeerId(String remotePeerId) {
+    this.remotePeerId = remotePeerId;
   }
 }

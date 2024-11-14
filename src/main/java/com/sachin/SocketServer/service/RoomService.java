@@ -106,4 +106,12 @@ public class RoomService {
   public Boolean getVideo(String roomId) {
     return databaseService.getVideo(roomId);
   }
+
+  public void setRemotePeerId(String roomId, String remotePeerId) {
+    databaseService.setRemotePeerId(roomId, remotePeerId);
+  }
+
+  public String getRemotePeerId(String roomId) {
+    return databaseService.getRemotePeerId(roomId);
+  }
 }
