@@ -73,6 +73,9 @@ public class WebSocketController extends TextWebSocketHandler {
         case "calleeCandidate":
           handleSignalingMessage(jsonMessage, session);
           break;
+        case "screenShare":
+          onScreenShare(jsonMessage, session);
+          break;
         case "mediaToggle":
           handleToggleMedia(session, jsonMessage);
           break;
@@ -157,6 +160,34 @@ public class WebSocketController extends TextWebSocketHandler {
     }
   }
 
+  private void onScreenShare(JSONObject jsonMessage, WebSocketSession session) throws IOException {
+    try {
+      String roomId = jsonMessage.getString("roomId");
+
+      if (!roomService.roomExists(roomId)) {
+        sendError(session, "Room not found");
+        return;
+      }
+
+      // Get the peer (the other participant) in the room
+      WebSocketSession peer = roomService.getPeer(roomId, session);
+
+      // If there's no peer or the peer's connection is not open, handle the error
+      if (peer == null || !peer.isOpen()) {
+        sendError(session, "Peer not connected or unavailable");
+        return;
+      }
+      boolean create = jsonMessage.getBoolean("create");
+      peer.sendMessage(new TextMessage(jsonMessage.toString()));
+      if (create) {
+        roomService.setVideo(roomId, true);
+      }
+
+    } catch (JSONException | IOException e) {
+      sendError(session, "Error processing signaling message: " + e.getMessage());
+    }
+  }
+
   private void handleSignalingMessage(JSONObject jsonMessage, WebSocketSession session)
       throws IOException {
     try {
@@ -175,10 +206,14 @@ public class WebSocketController extends TextWebSocketHandler {
         sendError(session, "Peer not connected or unavailable");
         return;
       }
-
+      String messageType = jsonMessage.getString("type");
       // Forward the signaling message (SDP answer or ICE candidate) to the peer
-      if (jsonMessage.has("sdp") || jsonMessage.has("candidate")) {
+      if (jsonMessage.has("sdp")
+          || jsonMessage.has("candidate")
+          || Objects.equals(messageType, "screenShare")) {
         peer.sendMessage(new TextMessage(jsonMessage.toString()));
+
+        System.out.println("This is PEER EXCHANGE" + jsonMessage);
       }
     } catch (JSONException | IOException e) {
       sendError(session, "Error processing signaling message: " + e.getMessage());
